@@ -1,0 +1,22 @@
+### page test
+GET localhost:8080/run?pageNumber=0
+
+
+
+### indexing test
+GET http://localhost:8080/run
+
+
+
+### void test
+DELETE localhost:8080/void-test
+
+
+
+### date test
+GET localhost:8080/date-test
+
+
+
+### join test
+GET http://localhost:8080/run-sns
