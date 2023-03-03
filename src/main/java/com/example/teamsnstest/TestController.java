@@ -1,13 +1,18 @@
 package com.example.teamsnstest;
 
-import com.example.teamsnstest.persist.TestEntity;
-import com.example.teamsnstest.persist.TestRepository;
+import com.example.teamsnstest.common.UserStatusType;
+import com.example.teamsnstest.dto.TestFeedResponse;
+import com.example.teamsnstest.persist.Feed;
+import com.example.teamsnstest.persist.FeedRepository;
+import com.example.teamsnstest.persist.User;
+import com.example.teamsnstest.persist.UserRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,75 +21,66 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class TestController {
 
-    private final TestRepository testRepository;
-
-    @DeleteMapping("/void-test")
-    public void test(){
-        System.out.println("삭제 작업 진행");
-    }
-
-
-    @GetMapping("/date-test")
-    public ResponseEntity<LocalDateTime> dateTest(){
-        LocalDateTime now = LocalDateTime.now();
-        return ResponseEntity.ok(now);
-    }
-
+    private final UserRepository userRepository;
+    private final FeedRepository feedRepository;
 
     @GetMapping("/run")
+    @Transactional
     public void run(){
-        for(int i = 1; i<=5000; i++){
-            if(i<= 20){
-                testRepository.save(
-                    TestEntity.builder()
-                        .testString(String.valueOf(i))
-                        .specialValue("special")
-                        .build()
-                );
-            } else if (i >= 4900) {
-                testRepository.save(
-                    TestEntity.builder()
-                        .testString(String.valueOf(i))
-                        .specialValue("special")
-                        .build()
-                );
-            } else {
-                testRepository.save(
-                    TestEntity.builder().testString(String.valueOf(i)).build()
-                );
-            }
-        }
 
-        PageRequest pageRequest = PageRequest.of(0, 20);
+        // 유저를 3명 만든다.
+        User user = User.builder()
+            .userStatus(UserStatusType.ACTIVE)
+            .username("박동빈")
+            .nickname("dongvin99")
+            .profileImageUrl("프로필이미지 url")
+            .build();
 
-        // 상위 1000개 중 1페이지 20개를 뒤져본다. 시간 측정한다.
-        long start = System.currentTimeMillis();
-        List<TestEntity> upper20 = testRepository.findAllBySpecialValue("special", pageRequest).getContent();
-        long end = System.currentTimeMillis();
-        System.out.println("상위 20개 시간 밀리초 Asc 정렬 없이 : " + (end-start));
-        for(TestEntity entity : upper20){
-            System.out.println(entity.getTestString() + "/" + entity.getCreatedAt());
-        }
+        User user2 = User.builder()
+            .userStatus(UserStatusType.ACTIVE)
+            .username("박동빈2")
+            .nickname("dongvin22")
+            .profileImageUrl("프로필이미지 url")
+            .build();
 
-        // 하위 1000개 중 1페이지 20개를 뒤져본다. 시간 측정한다.
-        start = System.currentTimeMillis();
-        List<TestEntity> lower20 = testRepository.findAllByOrderByCreatedAtDesc(pageRequest).getContent();
-        end = System.currentTimeMillis();
-        System.out.println("하위 20개 시간 밀리초 : " + (end-start));
-        for(TestEntity entity : lower20){
-            System.out.println(entity.getTestString() + "/" + entity.getCreatedAt());
-        }
+        User user3 = User.builder()
+            .userStatus(UserStatusType.ACTIVE)
+            .username("박동빈3")
+            .nickname("dongvin33")
+            .profileImageUrl("프로필이미지 url")
+            .build();
 
-        // 조건을 만족하는 것들 중 1페이지 20개를 뒤져본다. 시간 측정한다.
-        start = System.currentTimeMillis();
-        List<TestEntity> specialLower20 = testRepository
-            .findAllBySpecialValueOrderByCreatedAtDesc("special", pageRequest)
-            .getContent();
-        end = System.currentTimeMillis();
-        System.out.println("특수 조건 만족하는 하위 20개 시간 밀리초 : " + (end-start));
-        for(TestEntity entity : specialLower20){
-            System.out.println(entity.getTestString() + "/" + entity.getSpecialValue() + "/" + entity.getCreatedAt());
-        }
+        userRepository.save(user);
+        userRepository.save(user2);
+        userRepository.save(user3);
+        System.out.println("유저 3명 세이브 완료.");
+
+        // 게시물을 2개 만든다. 이때 1번 유저를 넣어서 양방향 매핑을 활용한다.
+        Feed feed = Feed.builder()
+            .content("게시물 내용")
+            .user(user)
+            .imageUrls("이미지1,이미지2")
+            .build();
+
+        Feed feed2 = Feed.builder()
+            .content("게시물 내용2")
+            .user(user2)
+            .imageUrls("이미지1,이미지2")
+            .build();
+
+        feedRepository.save(feed);
+        feedRepository.save(feed2);
+        System.out.println("게시물 세이브 완료.");
+
+    }// func
+
+    @GetMapping("/read")
+    public List<TestFeedResponse> makeResponse(){
+        // 게시물 엔티티를 불러와서 리스펀스를 만들 때, 유저도 같이 참조하게 만든다.
+        PageRequest pageRequest = PageRequest.of(0, 1);
+
+        return feedRepository.findAllByJoinUser().getContent().stream()
+            .map(TestFeedResponse::secondFrom).collect(Collectors.toList());
     }
 
 }
