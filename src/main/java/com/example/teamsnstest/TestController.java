@@ -1,6 +1,7 @@
 package com.example.teamsnstest;
 
 import com.example.teamsnstest.common.UserStatusType;
+import com.example.teamsnstest.converter.ForTestResponse;
 import com.example.teamsnstest.dto.TestFeedResponse;
 import com.example.teamsnstest.persist.Feed;
 import com.example.teamsnstest.persist.FeedRepository;
@@ -97,6 +98,25 @@ public class TestController {
         LocalDateTime to = LocalDateTime.now();
         LocalDateTime from = to.minusSeconds(5);
 
+        System.out.println("내부 엔티티를 이용하여 리스트 조회");
+        List<TestFeedResponse> resultList = feedRepository.findAll().stream().map(
+            TestFeedResponse::from
+        ).collect(Collectors.toList());
+
+        System.out.println("조인 쿼리과 Converter 인터페이스를 이용하여 리스트 조회");
+        List<TestFeedResponse> resultList2 = feedRepository.findAllByJoinWithNoPaging(
+            from, to
+        ).getContent().stream().map(TestFeedResponse::secondFrom)
+            .collect(Collectors.toList());
+
+        System.out.println("조인 쿼리와 Converter 인터페이스를 이용하여 페이징 처리한 리스트 조회");
+        List<TestFeedResponse> resultList3 = feedRepository
+            .findAllByJoinUserWithTimeDurationAndPaging(
+                from, to, pageRequest
+            ).getContent().stream().map(TestFeedResponse::secondFrom)
+            .collect(Collectors.toList());
+
+        System.out.println("조인 쿼리, Converter 인터페이스, IN 쿼리, 페이징 이용한 리스트 조회");
         return feedRepository.findAllByJoinUserWithTimeDurationAndFeedIdListAndPaging(
             feedIdList, from, to, pageRequest
             ).getContent().stream().map(TestFeedResponse::secondFrom)
